@@ -1,6 +1,6 @@
-# Java Institute Portal - Class Auto-Joiner Pro (single-user)🎓
+# Java Institute Portal - Class Auto-Joiner Pro (single-user) 🎓
 
-A modern, automated desktop application designed specifically as a **single-user, personalized tool** for a student of the Java Institute for Advanced Technology. With a single click, it handles the complete routine of logging into the student portal, locating today's lecture from the active timetable, and completing Zoom meeting registration automatically.
+A modern, automated desktop application designed specifically as a **single-user, personalized tool** for a student of the Java Institute for Advanced Technology. With a single click, it handles the complete routine of logging into the student portal, locating today's lecture from the active timetable, completing Zoom meeting registration, and launching the live class directly inside Google Chrome with automated privacy protection.
 
 > [!NOTE]
 > **Single-User Dedicated Architecture:**  
@@ -19,6 +19,8 @@ A modern, automated desktop application designed specifically as a **single-user
 * **One-Click Automation**: Launches Google Chrome, logs into the student portal, and navigates seamlessly to the dashboard.
 * **Smart Timetable Scanner**: Automatically identifies and filters today's scheduled lecture card based on the current date and time slot.
 * **Zoom Meeting Auto-Registrar**: Detects Zoom registration forms, automatically fills in required student fields, and submits the registration.
+* **In-Browser Live Class Join**: Automatically navigates from the confirmation screen to launch the lecture directly inside Google Chrome (Zoom Web Client) without requiring external software.
+* **Mic & Camera Privacy Controls**: Dedicated toggles (`🎤 Mute Mic` & `📷 Turn Off Camera`, ON by default) that automatically apply Chrome media permissions and mute audio/video before entering the meeting.
 * **Session Persistence**: Chrome browser remains open throughout your lecture session so you never get disconnected.
 * **Modern Dark-Mode UI**: Built with CustomTkinter featuring a sleek glassmorphism dashboard, dynamic status pill, and 2-column layout.
 * **Developer Activity Console**: High-tech color-coded live terminal providing real-time status updates at every stage of execution.
@@ -51,8 +53,8 @@ When the application is launched, you can view and update your portal login deta
 
 | File | Description |
 | :--- | :--- |
-| **`app.py`** | Modern graphical user interface (CustomTkinter) with live colored terminal console. |
-| **`portal_automation.py`** | Browser automation engine (Selenium) for login, timetable detection, and Zoom registration. |
+| **`app.py`** | Modern graphical user interface (CustomTkinter) with live colored terminal console, media toggles, and user settings. |
+| **`portal_automation.py`** | Browser automation engine (Selenium) for portal login, timetable detection, Zoom registration, and in-browser joining. |
 | **`user_data.txt`** | Dedicated configuration file storing user profile data and portal credentials. |
 | **`run.bat`** | Windows one-click executable batch launcher. |
 | **`requirements.txt`** | Python package dependencies (`customtkinter`, `selenium`, `webdriver-manager`). |
