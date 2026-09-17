@@ -3,3 +3,10 @@
 # You can view and edit your credentials and profile here.
 # =========================================================
 
+USERNAME=200516703056
+PASSWORD=Dinuja599#
+FIRST_NAME=Dilshan
+LAST_NAME=Gamage
+EMAIL=gamagedinuja842@gmail.com
+NATIONAL_ID=200516703056
+PHONE_NUMBER=0703026293
