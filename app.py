@@ -8,7 +8,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 
 # Import automation engine
-from portal_automation import run_full_flow
+from portal_automation import run_full_flow, run_login_only_flow
 
 DATA_FILE = "user_data.txt"
 
@@ -242,14 +242,28 @@ class ModernAutoJoinerApp(ctk.CTk):
             action_card,
             text="🚀  JOIN TODAY'S LECTURE NOW",
             font=ctk.CTkFont(family="Segoe UI", size=15, weight="bold"),
-            height=54,
+            height=50,
             corner_radius=10,
             fg_color="#2563EB",
             hover_color="#1D4ED8",
             cursor="hand2",
             command=self.start_joining_process
         )
-        self.start_btn.pack(fill="x", padx=20, pady=(4, 8))
+        self.start_btn.pack(fill="x", padx=20, pady=(4, 6))
+
+        # Login Only Button
+        self.login_btn = ctk.CTkButton(
+            action_card,
+            text="🔑  LOGIN TO PORTAL ONLY",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            height=42,
+            corner_radius=10,
+            fg_color="#0D9488",
+            hover_color="#0F766E",
+            cursor="hand2",
+            command=self.start_login_only_process
+        )
+        self.login_btn.pack(fill="x", padx=20, pady=(0, 10))
 
         # Media Controls Row (Mute Mic & Turn Off Camera)
         media_row = ctk.CTkFrame(action_card, fg_color="#0F172A", corner_radius=8)
@@ -279,7 +293,7 @@ class ModernAutoJoinerApp(ctk.CTk):
 
         hero_tip = ctk.CTkLabel(
             action_card,
-            text="✨ Launches Chrome, logs in, parses timetable, auto-registers & joins in browser.",
+            text="✨ Join lecture with auto Zoom registration, or click Login to open portal dashboard.",
             font=ctk.CTkFont(size=11),
             text_color="#94A3B8"
         )
@@ -334,7 +348,7 @@ class ModernAutoJoinerApp(ctk.CTk):
         self.log_box.tag_config("divider", foreground="#475569")
 
         self.append_log("System initialized. User profile loaded from user_data.txt.", "highlight")
-        self.append_log("Ready! Click 'JOIN TODAY'S LECTURE NOW' to begin.", "info")
+        self.append_log("Ready! Click 'JOIN TODAY\'S LECTURE NOW' or 'LOGIN TO PORTAL ONLY'.", "info")
 
     def _build_footer(self):
         footer = ctk.CTkFrame(self, height=38, corner_radius=0, fg_color="#0F172A")
@@ -464,6 +478,7 @@ class ModernAutoJoinerApp(ctk.CTk):
         turn_off_cam = self.cam_switch.get() == 1
 
         self.start_btn.configure(state="disabled", text="⏳  AUTOMATING IN PROGRESS...", fg_color="#475569")
+        self.login_btn.configure(state="disabled")
         self.update_status("● AUTOMATING...", color="#FBBF24", bg="#78350F")
 
         self.append_log("==================================================", "divider")
@@ -502,6 +517,64 @@ class ModernAutoJoinerApp(ctk.CTk):
                     state="normal",
                     text="🚀  JOIN TODAY'S LECTURE NOW",
                     fg_color="#2563EB"
+                )
+                self.login_btn.configure(
+                    state="normal",
+                    text="🔑  LOGIN TO PORTAL ONLY",
+                    fg_color="#0D9488"
+                )
+            self.after(0, _reset)
+
+    def start_login_only_process(self):
+        data = self._gather_user_data()
+        if not data["USERNAME"] or not data["PASSWORD"]:
+            messagebox.showwarning("Missing Credentials", "Please enter your username and password.")
+            return
+
+        # Always update user_data.txt with current values
+        save_user_data(data)
+
+        self.start_btn.configure(state="disabled")
+        self.login_btn.configure(state="disabled", text="⏳  LOGGING IN...", fg_color="#475569")
+        self.update_status("● LOGGING IN...", color="#FBBF24", bg="#78350F")
+
+        self.append_log("==================================================", "divider")
+        self.append_log("Starting portal login only (Student Dashboard)...", "highlight")
+
+        thread = threading.Thread(
+            target=self._run_login_only_thread,
+            args=(data["USERNAME"], data["PASSWORD"]),
+            daemon=True
+        )
+        thread.start()
+
+    def _run_login_only_thread(self, username, password):
+        try:
+            success = run_login_only_flow(
+                username=username,
+                password=password,
+                log_callback=self.append_log
+            )
+            if success:
+                self.append_log("Successfully logged into student portal! Chrome will stay open.", "success")
+                self.update_status("● PORTAL ACTIVE", color="#34D399", bg="#064E3B")
+            else:
+                self.append_log("Portal login encountered an issue. Please check the browser window.", "warning")
+                self.update_status("● CHECK BROWSER", color="#FBBF24", bg="#78350F")
+        except Exception as e:
+            self.append_log(f"Login Error: {str(e)}", "error")
+            self.update_status("● ERROR", color="#F87171", bg="#7F1D1D")
+        finally:
+            def _reset():
+                self.start_btn.configure(
+                    state="normal",
+                    text="🚀  JOIN TODAY'S LECTURE NOW",
+                    fg_color="#2563EB"
+                )
+                self.login_btn.configure(
+                    state="normal",
+                    text="🔑  LOGIN TO PORTAL ONLY",
+                    fg_color="#0D9488"
                 )
             self.after(0, _reset)
 

@@ -676,3 +676,19 @@ def run_full_flow(username, password, student_info=None, mute_mic=True, turn_off
     except Exception as e:
         log_callback(f"Execution Error: {str(e)}", level="error")
         return False
+
+
+def run_login_only_flow(username, password, log_callback=print):
+    """Executes only the login flow: Chrome launch -> Login -> Stay on Student Dashboard."""
+    try:
+        log_callback("Starting Chrome browser...")
+        driver = create_chrome_driver()
+
+        perform_login(driver, username, password, log_callback)
+        time.sleep(2)
+        log_callback("Portal login completed successfully! Dashboard is open.", level="success")
+        return True
+    except Exception as e:
+        log_callback(f"Login Error: {str(e)}", level="error")
+        return False
+
