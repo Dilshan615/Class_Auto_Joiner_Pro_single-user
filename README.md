@@ -72,38 +72,6 @@ A high-performance, automated desktop suite engineered for students of the **Jav
 
 ---
 
-## 🔄 Automation Workflow
-
-```mermaid
-flowchart TD
-    A[Launch app.py / run.bat] --> B[Load Profile from user_data.txt]
-    B --> C{Choose Mode}
-    
-    C -- Instant Mode --> D[Click 'JOIN TODAY'S LECTURE NOW']
-    C -- Timer Mode --> E[Select Time & Click 'Set Auto-Join Timer']
-    E --> F[Live Countdown Timer Active]
-    F -->|Target Time Reached| D
-    
-    D --> G[Spawn Dedicated Background Thread]
-    G --> H[Initialize Chrome with Media Privacy Policies]
-    H --> I[Navigate to Java Institute Portal Login]
-    I --> J[Enter Username & Password and Submit]
-    J --> K[Auto-Acknowledge Declaration Modals & Popups]
-    K --> L[Scan Dashboard Timetable for Today's Class]
-    L --> M{Lecture Scheduled Today?}
-    M -- No --> N[Log Warning & Keep Browser Open for Manual Use]
-    M -- Yes --> O[Extract Module Details & Click 'Click Here to Join']
-    O --> P{Zoom Registration Required?}
-    P -- Yes --> Q[Auto-Fill Student Profile & Submit Registration]
-    P -- No --> R[Navigate Directly to Zoom Meeting Page]
-    Q --> R
-    R --> S[Detect 'Join from your browser' & Launch Web Client]
-    S --> T[Configure Display Name, Mute Mic & Turn Off Camera]
-    T --> U[Confirm Join & Keep Browser Session Active]
-```
-
----
-
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
