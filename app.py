@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 import customtkinter as ctk
 from tkinter import messagebox
@@ -19,7 +20,8 @@ DEFAULT_KEYS = [
     "LAST_NAME",
     "EMAIL",
     "NATIONAL_ID",
-    "PHONE_NUMBER"
+    "PHONE_NUMBER",
+    "SCHEDULED_TIME"
 ]
 
 
@@ -65,8 +67,13 @@ class ModernAutoJoinerApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.title("Java Institute | Class Auto-Joiner Pro")
-        self.geometry("980x790")
-        self.minsize(860, 690)
+        self.geometry("980x850")
+        self.minsize(860, 720)
+
+        # Scheduler state
+        self.scheduler_running = False
+        self.scheduler_target = None
+        self.sched_thread = None
 
         # Load profile exclusively from user_data.txt
         self.user_data = load_user_data()
@@ -291,9 +298,105 @@ class ModernAutoJoinerApp(ctk.CTk):
         self.cam_switch.select() # Default ON (Camera Off)
         self.cam_switch.grid(row=0, column=1, padx=15, pady=8, sticky="w")
 
+        # ----------------- SCHEDULE AUTO-JOINER CARD -----------------
+        schedule_frame = ctk.CTkFrame(action_card, fg_color="#0F172A", corner_radius=10)
+        schedule_frame.pack(fill="x", padx=20, pady=(0, 10))
+
+        sched_header = ctk.CTkFrame(schedule_frame, fg_color="transparent")
+        sched_header.pack(fill="x", padx=12, pady=(8, 4))
+
+        ctk.CTkLabel(
+            sched_header,
+            text="⏰ Scheduled Auto-Joiner (Auto Start)",
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            text_color="#38BDF8"
+        ).pack(side="left")
+
+        self.sched_countdown_lbl = ctk.CTkLabel(
+            sched_header,
+            text="● Timer Inactive",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            text_color="#94A3B8"
+        )
+        self.sched_countdown_lbl.pack(side="right")
+
+        # Time Pickers Row
+        time_pick_row = ctk.CTkFrame(schedule_frame, fg_color="transparent")
+        time_pick_row.pack(fill="x", padx=12, pady=(2, 10))
+
+        # Parse stored scheduled time if available
+        sched_str = self.user_data.get("SCHEDULED_TIME", "08:30 AM")
+        default_h, default_m, default_ampm = "08", "30", "AM"
+        if sched_str:
+            try:
+                parts = sched_str.strip().split()
+                if len(parts) >= 2:
+                    t_part, ampm_part = parts[0], parts[1].upper()
+                    if ":" in t_part:
+                        hm = t_part.split(":")
+                        if len(hm) >= 2:
+                            default_h = f"{int(hm[0]):02d}"
+                            default_m = f"{int(hm[1]):02d}"
+                    if ampm_part in ["AM", "PM"]:
+                        default_ampm = ampm_part
+            except Exception:
+                pass
+
+        # Hours dropdown
+        hours = [f"{i:02d}" for i in range(1, 13)]
+        self.hour_menu = ctk.CTkOptionMenu(
+            time_pick_row,
+            values=hours,
+            width=65,
+            height=32,
+            fg_color="#334155",
+            button_color="#475569"
+        )
+        self.hour_menu.set(default_h)
+        self.hour_menu.pack(side="left", padx=(0, 4))
+
+        ctk.CTkLabel(time_pick_row, text=":", font=ctk.CTkFont(size=14, weight="bold"), text_color="#F8FAFC").pack(side="left", padx=2)
+
+        # Minutes dropdown
+        mins = [f"{i:02d}" for i in range(0, 60)]
+        self.min_menu = ctk.CTkOptionMenu(
+            time_pick_row,
+            values=mins,
+            width=65,
+            height=32,
+            fg_color="#334155",
+            button_color="#475569"
+        )
+        self.min_menu.set(default_m)
+        self.min_menu.pack(side="left", padx=(4, 6))
+
+        # AM / PM dropdown
+        self.ampm_menu = ctk.CTkOptionMenu(
+            time_pick_row,
+            values=["AM", "PM"],
+            width=70,
+            height=32,
+            fg_color="#334155",
+            button_color="#475569"
+        )
+        self.ampm_menu.set(default_ampm)
+        self.ampm_menu.pack(side="left", padx=(0, 10))
+
+        # Start / Cancel Schedule Button
+        self.schedule_btn = ctk.CTkButton(
+            time_pick_row,
+            text="⏱ Set Auto-Join Timer",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            height=32,
+            fg_color="#6366F1",
+            hover_color="#4F46E5",
+            command=self._toggle_schedule
+        )
+        self.schedule_btn.pack(side="left", fill="x", expand=True)
+
         hero_tip = ctk.CTkLabel(
             action_card,
-            text="✨ Join lecture with auto Zoom registration, or click Login to open portal dashboard.",
+            text="✨ Join lecture with auto Zoom registration, or schedule a time to join automatically.",
             font=ctk.CTkFont(size=11),
             text_color="#94A3B8"
         )
@@ -420,6 +523,9 @@ class ModernAutoJoinerApp(ctk.CTk):
         self.append_log("User profile & credentials saved to user_data.txt successfully!", "success")
 
     def _gather_user_data(self):
+        h = self.hour_menu.get() if hasattr(self, "hour_menu") else "08"
+        m = self.min_menu.get() if hasattr(self, "min_menu") else "30"
+        ampm = self.ampm_menu.get() if hasattr(self, "ampm_menu") else "AM"
         return {
             "USERNAME": self.user_entry.get().strip(),
             "PASSWORD": self.pass_entry.get().strip(),
@@ -428,7 +534,121 @@ class ModernAutoJoinerApp(ctk.CTk):
             "EMAIL": self.email_entry.get().strip(),
             "NATIONAL_ID": self.id_entry.get().strip(),
             "PHONE_NUMBER": self.phone_entry.get().strip(),
+            "SCHEDULED_TIME": f"{h}:{m} {ampm}"
         }
+
+    def _toggle_schedule(self):
+        if self.scheduler_running:
+            self._cancel_schedule()
+        else:
+            self._start_schedule()
+
+    def _start_schedule(self):
+        # Validate credentials first
+        data = self._gather_user_data()
+        if not data["USERNAME"] or not data["PASSWORD"]:
+            messagebox.showwarning("Missing Credentials", "Please enter your username and password before setting a schedule.")
+            return
+
+        save_user_data(data)
+
+        # Parse selected time
+        h_str = self.hour_menu.get()
+        m_str = self.min_menu.get()
+        ampm_str = self.ampm_menu.get()
+
+        try:
+            hour = int(h_str)
+            minute = int(m_str)
+            if ampm_str == "PM" and hour != 12:
+                hour += 12
+            elif ampm_str == "AM" and hour == 12:
+                hour = 0
+        except Exception:
+            messagebox.showerror("Invalid Time", "Invalid time selected.")
+            return
+
+        now = datetime.datetime.now()
+        target_dt = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+        # If the target time for today has already passed, schedule for tomorrow
+        if target_dt <= now:
+            target_dt += datetime.timedelta(days=1)
+            sched_day_text = "Tomorrow"
+        else:
+            sched_day_text = "Today"
+
+        self.scheduler_target = target_dt
+        self.scheduler_running = True
+
+        time_display = f"{h_str}:{m_str} {ampm_str}"
+        self.schedule_btn.configure(
+            text="❌ Cancel Timer",
+            fg_color="#DC2626",
+            hover_color="#B91C1C"
+        )
+        self.hour_menu.configure(state="disabled")
+        self.min_menu.configure(state="disabled")
+        self.ampm_menu.configure(state="disabled")
+
+        self.update_status(f"● TIMER: {time_display}", color="#FBBF24", bg="#78350F")
+        self.append_log("==================================================", "divider")
+        self.append_log(f"⏰ Auto-Join timer scheduled for {sched_day_text} at {time_display}!", "highlight")
+        self.append_log("The system will automatically launch and join when the scheduled time arrives.", "info")
+
+        # Start timer background thread
+        self.sched_thread = threading.Thread(target=self._scheduler_worker, daemon=True)
+        self.sched_thread.start()
+
+    def _cancel_schedule(self):
+        self.scheduler_running = False
+        self.schedule_btn.configure(
+            text="⏱ Set Auto-Join Timer",
+            fg_color="#6366F1",
+            hover_color="#4F46E5"
+        )
+        self.hour_menu.configure(state="normal")
+        self.min_menu.configure(state="normal")
+        self.ampm_menu.configure(state="normal")
+        self.sched_countdown_lbl.configure(text="● Timer Inactive", text_color="#94A3B8")
+        self.update_status("● SYSTEM READY", color="#34D399", bg="#064E3B")
+        self.append_log("⏰ Auto-Join timer cancelled by user.", "warning")
+
+    def _scheduler_worker(self):
+        while self.scheduler_running:
+            now = datetime.datetime.now()
+            diff = self.scheduler_target - now
+            seconds_left = int(diff.total_seconds())
+
+            if seconds_left <= 0:
+                # Target time reached
+                self.scheduler_running = False
+                def _trigger():
+                    self.schedule_btn.configure(
+                        text="⏱ Set Auto-Join Timer",
+                        fg_color="#6366F1",
+                        hover_color="#4F46E5"
+                    )
+                    self.hour_menu.configure(state="normal")
+                    self.min_menu.configure(state="normal")
+                    self.ampm_menu.configure(state="normal")
+                    self.sched_countdown_lbl.configure(text="🚀 Launching now!", text_color="#34D399")
+                    self.append_log("⏰ Scheduled target time reached! Starting automated lecture join...", "success")
+                    self.start_joining_process()
+
+                self.after(0, _trigger)
+                break
+
+            hrs, rem = divmod(seconds_left, 3600)
+            mins, secs = divmod(rem, 60)
+            countdown_str = f"⏳ In {hrs:02d}h {mins:02d}m {secs:02d}s"
+
+            def _update_ui(c_str=countdown_str):
+                if self.scheduler_running:
+                    self.sched_countdown_lbl.configure(text=c_str, text_color="#FBBF24")
+
+            self.after(0, _update_ui)
+            time.sleep(1)
 
     def append_log(self, text, level="info"):
         def _update():

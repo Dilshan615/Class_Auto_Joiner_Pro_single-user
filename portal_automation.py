@@ -5,6 +5,7 @@ import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
@@ -363,7 +364,7 @@ def handle_zoom_registration(driver, student_info=None, log_callback=print):
         except Exception:
             pass
 
-        if "register" in current_url or "meeting registration" in page_source or "first name" in page_source:
+        if "register" in current_url or "meeting registration" in page_source or "first name" in page_source or "meeting-registration" in current_url:
             is_reg_page = True
             break
 
@@ -380,87 +381,224 @@ def handle_zoom_registration(driver, student_info=None, log_callback=print):
     log_callback("Zoom Meeting Registration form detected! Auto-filling profile...", level="highlight")
     time.sleep(1.5)
 
-    def fill_input(selectors, val, name):
+    first_name = student_info.get("first_name", "")
+    last_name = student_info.get("last_name", "")
+    email = student_info.get("email", "")
+    nic = student_info.get("id_number", "")
+    phone = student_info.get("phone", "")
+
+    # Execute JavaScript to identify and fill all registration inputs accurately
+    fill_script = """
+    const values = arguments[0];
+    const results = [];
+    
+    // Helper to trigger input/change events for React/Vue frameworks
+    function setInputValue(input, val) {
+        if (!input || !val) return false;
+        input.focus();
+        input.value = val;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
+        return true;
+    }
+
+    // Get all interactive visible text-like input fields
+    const inputs = Array.from(document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio'])"))
+        .filter(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0 && el.offsetHeight > 0;
+        });
+
+    const assigned = new Set();
+
+    function getFieldContext(el) {
+        let text = (el.getAttribute('placeholder') || '') + ' ' +
+                   (el.getAttribute('name') || '') + ' ' +
+                   (el.getAttribute('id') || '') + ' ' +
+                   (el.getAttribute('aria-label') || '');
+        
+        // Check associated label
+        if (el.id) {
+            const lbl = document.querySelector(`label[for='${el.id}']`);
+            if (lbl) text += ' ' + lbl.innerText;
+        }
+        
+        // Check closest label or form container
+        let parent = el.parentElement;
+        for (let i = 0; i < 4 && parent; i++) {
+            const labels = parent.querySelectorAll('label, .form-label, .control-label, span');
+            labels.forEach(l => text += ' ' + l.innerText);
+            if (parent.innerText && parent.innerText.length < 150) {
+                text += ' ' + parent.innerText;
+            }
+            parent = parent.parentElement;
+        }
+        return text.toLowerCase();
+    }
+
+    // 1. Identify and fill First Name
+    for (const input of inputs) {
+        if (assigned.has(input)) continue;
+        const ctx = getFieldContext(input);
+        if ((ctx.includes('first name') || ctx.includes('firstname') || ctx.includes('first_name')) && !ctx.includes('last')) {
+            if (setInputValue(input, values.first_name)) {
+                assigned.add(input);
+                results.push('First Name');
+                break;
+            }
+        }
+    }
+
+    // 2. Identify and fill Last Name
+    for (const input of inputs) {
+        if (assigned.has(input)) continue;
+        const ctx = getFieldContext(input);
+        if (ctx.includes('last name') || ctx.includes('lastname') || ctx.includes('last_name') || ctx.includes('surname')) {
+            if (setInputValue(input, values.last_name)) {
+                assigned.add(input);
+                results.push('Last Name');
+                break;
+            }
+        }
+    }
+
+    // 3. Identify and fill Email Address
+    for (const input of inputs) {
+        if (assigned.has(input)) continue;
+        const ctx = getFieldContext(input);
+        if ((ctx.includes('email') || ctx.includes('e-mail')) && !ctx.includes('confirm') && !ctx.includes('re-enter')) {
+            if (setInputValue(input, values.email)) {
+                assigned.add(input);
+                results.push('Email Address');
+                break;
+            }
+        }
+    }
+
+    // 4. Identify and fill Confirm Email (if present)
+    for (const input of inputs) {
+        if (assigned.has(input)) continue;
+        const ctx = getFieldContext(input);
+        if (ctx.includes('confirm') || ctx.includes('re-enter') || ctx.includes('confirm_email')) {
+            if (setInputValue(input, values.email)) {
+                assigned.add(input);
+                results.push('Confirm Email');
+                break;
+            }
+        }
+    }
+
+    // 5. Identify and fill NIC Number / National ID
+    for (const input of inputs) {
+        if (assigned.has(input)) continue;
+        const ctx = getFieldContext(input);
+        if (ctx.includes('nic') || ctx.includes('national id') || ctx.includes('identity') || ctx.includes('id number') || ctx.includes('student id')) {
+            if (setInputValue(input, values.nic)) {
+                assigned.add(input);
+                results.push('NIC / National ID Number');
+                break;
+            }
+        }
+    }
+
+    // 6. Identify and fill Contact / Phone Number
+    for (const input of inputs) {
+        if (assigned.has(input)) continue;
+        const ctx = getFieldContext(input);
+        if (ctx.includes('contact') || ctx.includes('mobile') || ctx.includes('phone') || ctx.includes('tel')) {
+            if (setInputValue(input, values.phone)) {
+                assigned.add(input);
+                results.push('Contact Number');
+                break;
+            }
+        }
+    }
+
+    // 7. Positional Fallback if some fields were not matched by text
+    const unassignedInputs = inputs.filter(inp => !assigned.has(inp));
+    if (unassignedInputs.length > 0) {
+        const order = [
+            { key: 'first_name', val: values.first_name, name: 'First Name (by position)' },
+            { key: 'last_name', val: values.last_name, name: 'Last Name (by position)' },
+            { key: 'email', val: values.email, name: 'Email Address (by position)' },
+            { key: 'nic', val: values.nic, name: 'NIC Number (by position)' },
+            { key: 'phone', val: values.phone, name: 'Contact Number (by position)' }
+        ];
+
+        let unIdx = 0;
+        for (const item of order) {
+            if (!results.some(r => r.toLowerCase().includes(item.key.replace('_', ' '))) && unIdx < unassignedInputs.length) {
+                if (setInputValue(unassignedInputs[unIdx], item.val)) {
+                    results.push(item.name);
+                    unIdx++;
+                }
+            }
+        }
+    }
+
+    return results;
+    """
+
+    try:
+        filled_fields = driver.execute_script(fill_script, {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "nic": nic,
+            "phone": phone
+        })
+        for field in (filled_fields or []):
+            log_callback(f"  Field filled: {field}")
+    except Exception as e:
+        log_callback(f"  Auto-fill script note: {e}", level="warning")
+
+    # Also perform Selenium-level typing as reinforcement to ensure standard keyboard events are dispatched
+    time.sleep(0.5)
+
+    def selenium_fill(selectors, val, name):
         if not val:
             return False
-        elem = None
         for sel_type, sel_query in selectors:
             try:
                 candidates = driver.find_elements(sel_type, sel_query)
                 for c in candidates:
                     if c.is_displayed() and c.tag_name == "input":
-                        elem = c
-                        break
-                if elem:
-                    break
+                        try:
+                            c.click()
+                            time.sleep(0.1)
+                            c.send_keys(Keys.CONTROL + "a")
+                            c.send_keys(Keys.BACKSPACE)
+                            c.clear()
+                            c.send_keys(val)
+                            driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true })); arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", c)
+                            return True
+                        except Exception:
+                            pass
             except Exception:
                 continue
-
-        if elem:
-            try:
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-                time.sleep(0.2)
-                elem.clear()
-                elem.send_keys(val)
-                log_callback(f"  Field filled: {name}")
-                return True
-            except Exception:
-                try:
-                    driver.execute_script("arguments[0].value = arguments[1];", elem, val)
-                    log_callback(f"  Field filled: {name}")
-                    return True
-                except Exception:
-                    pass
-        log_callback(f"  Could not locate input field for: {name}", level="warning")
         return False
 
-    # First Name
-    fill_input([
-        (By.XPATH, "//input[@placeholder='First Name' or @name='first_name' or @id='first_name']"),
-        (By.XPATH, "//label[contains(text(), 'First Name')]/following::input[1]"),
-        (By.XPATH, "//*[contains(text(), 'First Name')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row')]//input"),
-        (By.XPATH, "(//input[@type='text'])[1]"),
-    ], student_info.get("first_name", ""), "First Name")
+    # Reinforce Email field
+    selenium_fill([
+        (By.XPATH, "//input[@type='email' or @name='email' or @id='email' or contains(@placeholder, 'Email') or contains(@placeholder, 'email')]"),
+        (By.XPATH, "//*[contains(translate(., 'EMAIL', 'email'), 'email') and not(contains(translate(., 'CONFIRM', 'confirm'), 'confirm'))]/following::input[1]"),
+        (By.XPATH, "//*[contains(translate(., 'EMAIL', 'email'), 'email') and not(contains(translate(., 'CONFIRM', 'confirm'), 'confirm'))]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row') or contains(@class, 'form-field')]//input"),
+    ], email, "Email Address")
 
-    # Last Name
-    fill_input([
-        (By.XPATH, "//input[@placeholder='Last Name' or @name='last_name' or @id='last_name']"),
-        (By.XPATH, "//label[contains(text(), 'Last Name')]/following::input[1]"),
-        (By.XPATH, "//*[contains(text(), 'Last Name')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row')]//input"),
-        (By.XPATH, "(//input[@type='text'])[2]"),
-    ], student_info.get("last_name", ""), "Last Name")
+    # Reinforce NIC field
+    selenium_fill([
+        (By.XPATH, "//input[@name='nic' or @id='nic' or contains(@placeholder, 'NIC') or contains(@placeholder, 'National ID') or contains(@placeholder, 'id')]"),
+        (By.XPATH, "//*[contains(translate(., 'NIC', 'nic'), 'nic') or contains(translate(., 'NATIONAL ID', 'national id'), 'national id')]/following::input[1]"),
+        (By.XPATH, "//*[contains(translate(., 'NIC', 'nic'), 'nic') or contains(translate(., 'NATIONAL ID', 'national id'), 'national id')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row') or contains(@class, 'form-field')]//input"),
+    ], nic, "NIC Number")
 
-    # Email Address
-    email_addr = student_info.get("email", "")
-    fill_input([
-        (By.XPATH, "//input[@type='email' or @placeholder='join@company.com' or @name='email' or @id='email']"),
-        (By.XPATH, "//label[contains(text(), 'Email Address')]/following::input[1]"),
-        (By.XPATH, "//*[contains(text(), 'Email Address')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row')]//input"),
-    ], email_addr, "Email Address")
-
-    # Confirm Email (if present)
-    fill_input([
-        (By.XPATH, "//input[@name='confirm_email' or @id='confirm_email']"),
-        (By.XPATH, "//label[contains(text(), 'Confirm Email')]/following::input[1]"),
-        (By.XPATH, "//input[contains(@placeholder, 'Confirm') or contains(@placeholder, 'confirm')]"),
-    ], email_addr, "Confirm Email")
-
-    # National ID Number
-    fill_input([
-        (By.XPATH, "//label[contains(text(), 'National ID')]/following::input[1]"),
-        (By.XPATH, "//*[contains(text(), 'National ID')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row')]//input"),
-        (By.XPATH, "//input[contains(@placeholder, 'National ID') or contains(@placeholder, 'NIC') or contains(@placeholder, 'ID')]"),
-        (By.XPATH, "(//input[@type='text'])[3]"),
-    ], student_info.get("id_number", ""), "National ID Number")
-
-    # Mobile Phone Number
-    fill_input([
-        (By.XPATH, "//label[contains(text(), 'Mobile Phone') or contains(text(), 'Mobile') or contains(text(), 'Phone')]/following::input[1]"),
-        (By.XPATH, "//*[contains(text(), 'Mobile Phone') or contains(text(), 'Phone')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row')]//input"),
-        (By.XPATH, "//input[@type='tel']"),
-        (By.XPATH, "//input[contains(@placeholder, 'Mobile') or contains(@placeholder, 'Phone')]"),
-        (By.XPATH, "(//input[@type='text'])[4]"),
-    ], student_info.get("phone", ""), "Mobile Phone Number")
+    # Reinforce Contact Number field
+    selenium_fill([
+        (By.XPATH, "//input[@type='tel' or @name='phone' or @id='phone' or contains(@placeholder, 'Contact') or contains(@placeholder, 'Phone') or contains(@placeholder, 'Mobile')]"),
+        (By.XPATH, "//*[contains(translate(., 'CONTACT', 'contact'), 'contact') or contains(translate(., 'PHONE', 'phone'), 'phone') or contains(translate(., 'MOBILE', 'mobile'), 'mobile')]/following::input[1]"),
+        (By.XPATH, "//*[contains(translate(., 'CONTACT', 'contact'), 'contact') or contains(translate(., 'PHONE', 'phone'), 'phone') or contains(translate(., 'MOBILE', 'mobile'), 'mobile')]/ancestor::div[contains(@class, 'form-group') or contains(@class, 'form-item') or contains(@class, 'row') or contains(@class, 'form-field')]//input"),
+    ], phone, "Contact Number")
 
     time.sleep(1)
 
@@ -469,9 +607,9 @@ def handle_zoom_registration(driver, student_info=None, log_callback=print):
     reg_btn = None
     reg_candidates = driver.find_elements(
         By.XPATH,
-        "//button[contains(translate(text(), 'REGISTER', 'register'), 'register') or @type='submit'] | "
+        "//button[contains(translate(., 'REGISTER', 'register'), 'register') or @type='submit'] | "
         "//input[@type='submit' and contains(translate(@value, 'REGISTER', 'register'), 'register')] | "
-        "//a[contains(translate(text(), 'REGISTER', 'register'), 'register')]"
+        "//a[contains(translate(., 'REGISTER', 'register'), 'register')]"
     )
 
     for rb in reg_candidates:
