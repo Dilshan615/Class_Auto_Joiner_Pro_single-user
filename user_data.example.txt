@@ -1,0 +1,13 @@
+# =========================================================
+# JAVA INSTITUTE CLASS AUTO-JOINER - USER CONFIGURATION
+# You can view and edit your credentials and profile here.
+# =========================================================
+
+USERNAME=YOUR_STUDENT_ID
+PASSWORD=YOUR_PORTAL_PASSWORD
+FIRST_NAME=YourFirstName
+LAST_NAME=YourLastName
+EMAIL=your.email@example.com
+NATIONAL_ID=YOUR_NIC_NUMBER
+PHONE_NUMBER=07XXXXXXXX
+SCHEDULED_TIME=11:40 PM
