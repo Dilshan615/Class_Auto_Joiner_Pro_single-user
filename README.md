@@ -83,7 +83,7 @@ A high-performance, automated desktop suite engineered for students of the **Jav
 Clone or download this repository, open a terminal in the project folder, and install the required dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 ```
 
 ### 2. Launching the Application
@@ -93,8 +93,9 @@ Double-click the **`run.bat`** file in the root directory.
 
 #### Option B (Command Line):
 ```bash
-python app.py
+python src/app.py
 ```
+
 
 ---
 

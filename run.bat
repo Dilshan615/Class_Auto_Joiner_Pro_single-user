@@ -103,7 +103,11 @@ set "PY_EXEC=.venv\Scripts\python.exe"
 :: 3. Check and Install Required Python Libraries
 :: ---------------------------------------------------------
 echo [*] Checking and installing required Python libraries...
-"%PY_EXEC%" -m pip install --disable-pip-version-check --no-warn-script-location -r requirements.txt
+if exist "src\requirements.txt" (
+    "%PY_EXEC%" -m pip install --disable-pip-version-check --no-warn-script-location -r src\requirements.txt
+) else (
+    "%PY_EXEC%" -m pip install --disable-pip-version-check --no-warn-script-location customtkinter selenium webdriver-manager
+)
 if errorlevel 1 (
     echo [!] Retrying basic dependency installation...
     "%PY_EXEC%" -m pip install customtkinter selenium webdriver-manager
@@ -134,7 +138,12 @@ echo [+] Starting Java Institute Class Auto Joiner Pro...
 echo ================================================================
 echo.
 
-"%PY_EXEC%" app.py
+if exist "src\app.py" (
+    "%PY_EXEC%" src\app.py
+) else (
+    "%PY_EXEC%" app.py
+)
+
 
 if errorlevel 1 (
     echo.

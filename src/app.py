@@ -9,9 +9,8 @@ import customtkinter as ctk
 from tkinter import messagebox
 
 # Import automation engine
-from portal_automation import run_full_flow, run_login_only_flow
-
-DATA_FILE = "user_data.txt"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, "user_data.txt")
 
 DEFAULT_KEYS = [
     "USERNAME",
