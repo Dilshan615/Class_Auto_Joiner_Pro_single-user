@@ -2,5 +2,3 @@
 # JAVA INSTITUTE CLASS AUTO-JOINER - USER CONFIGURATION
 # You can view and edit your credentials and profile here.
 # =========================================================
-
-
