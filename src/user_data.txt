@@ -3,11 +3,3 @@
 # You can view and edit your credentials and profile here.
 # =========================================================
 
-USERNAME=200516703056
-PASSWORD=Dinuja5999#
-FIRST_NAME=
-LAST_NAME=
-EMAIL=
-NATIONAL_ID=
-PHONE_NUMBER=
-SCHEDULED_TIME=11:40 PM
