@@ -10,6 +10,14 @@ from tkinter import messagebox
 
 # Import automation engine
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+try:
+    from portal_automation import run_full_flow, run_login_only_flow
+except ImportError:
+    from src.portal_automation import run_full_flow, run_login_only_flow
+
 DATA_FILE = os.path.join(BASE_DIR, "user_data.txt")
 
 DEFAULT_KEYS = [
@@ -214,7 +222,7 @@ class ModernAutoJoinerApp(ctk.CTk):
         ctk.CTkLabel(left_panel, text="Student ID / Registration No", font=ctk.CTkFont(size=12, weight="bold"), text_color="#94A3B8").pack(anchor="w", padx=15, pady=(4, 3))
         self.user_entry = ctk.CTkEntry(
             left_panel,
-            placeholder_text="e.g. 200516703056",
+            placeholder_text="e.g. 0000254156275",
             height=40,
             font=ctk.CTkFont(family="Consolas", size=13),
             fg_color="#1E293B",

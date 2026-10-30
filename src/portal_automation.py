@@ -1,3 +1,7 @@
+def default_log(message, *args, **kwargs):
+    print(message)
+
+
 import datetime
 import os
 import re
@@ -45,7 +49,7 @@ def create_chrome_driver(mute_mic=True, turn_off_cam=True):
     return driver
 
 
-def perform_login(driver, username, password, log_callback=print):
+def perform_login(driver, username, password, log_callback=default_log):
     """Navigates to student login and enters credentials."""
     log_callback("Navigating to Java Institute Student Login...")
     driver.get(LOGIN_URL)
@@ -90,7 +94,7 @@ def perform_login(driver, username, password, log_callback=print):
         handle_modals(driver, log_callback)
 
 
-def handle_modals(driver, log_callback=print):
+def handle_modals(driver, log_callback=default_log):
     """Closes any popups or declaration modals that appear after login."""
     try:
         agree_buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'I Agree') or @onclick='checkIsFirstTime();']")
@@ -196,7 +200,7 @@ def parse_lecture_time(text, now):
     return "Unknown Time", ""
 
 
-def join_todays_lecture(driver, log_callback=print):
+def join_todays_lecture(driver, log_callback=default_log):
     """
     Locates 'Your Active TimeTable' section on dashboard,
     identifies today's lecture card, and clicks 'Click Here to Join'.
@@ -339,7 +343,7 @@ def join_todays_lecture(driver, log_callback=print):
     return False
 
 
-def handle_zoom_registration(driver, student_info=None, log_callback=print):
+def handle_zoom_registration(driver, student_info=None, log_callback=default_log):
     """
     Detects Zoom Meeting Registration page, automatically enters student details,
     and submits the registration form.
@@ -636,7 +640,7 @@ def handle_zoom_registration(driver, student_info=None, log_callback=print):
         return False
 
 
-def join_zoom_in_browser(driver, student_info=None, mute_mic=True, turn_off_cam=True, log_callback=print):
+def join_zoom_in_browser(driver, student_info=None, mute_mic=True, turn_off_cam=True, log_callback=default_log):
     """
     After Zoom registration, finds the meeting join link and launches
     the lecture directly inside the browser with mic and camera turned off.
@@ -789,7 +793,7 @@ def join_zoom_in_browser(driver, student_info=None, mute_mic=True, turn_off_cam=
     log_callback("Successfully logged into lecture directly in browser!", level="success")
 
 
-def run_full_flow(username, password, student_info=None, mute_mic=True, turn_off_cam=True, log_callback=print):
+def run_full_flow(username, password, student_info=None, mute_mic=True, turn_off_cam=True, log_callback=default_log):
     """Executes the complete flow: Chrome launch -> Login -> Timetable -> Join -> Zoom Auto-fill & In-Browser Join."""
     try:
         log_callback("Starting Chrome browser...")
@@ -816,7 +820,7 @@ def run_full_flow(username, password, student_info=None, mute_mic=True, turn_off
         return False
 
 
-def run_login_only_flow(username, password, log_callback=print):
+def run_login_only_flow(username, password, log_callback=default_log):
     """Executes only the login flow: Chrome launch -> Login -> Stay on Student Dashboard."""
     try:
         log_callback("Starting Chrome browser...")
